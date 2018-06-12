@@ -1,0 +1,218 @@
+---
+title: "FinalProjectPart2"
+author: "Moran"
+date: "5/28/2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+```
+
+## Read Data 
+
+```{r}
+#wine <- read.csv("winequality-red.csv")
+wine <- read.csv("zoo.csv")
+zoo <- wine
+wine <- wine[,-19]
+wine <- wine[,-1]
+#wine$quality <- as.factor (wine$quality)
+
+
+```
+## formula for naive bayes using binary variable
+
+```{r}
+library(e1071)
+# split data 
+set.seed(12345)  
+index.train<-sample(1:nrow(wine),nrow(wine)%/%(10/6))
+index.test <-setdiff(1:nrow(wine),index.train) 
+length(index.train)
+length(index.test)
+
+tr<-wine[index.train,]
+ts<-wine[index.test,]
+
+# class _type is categorical variable
+tr$class_type <- as.factor(tr$class_type)
+
+# run model
+nb_default <- naiveBayes(tr$class_type~.,data = tr[,-17])
+default_pred <- predict(nb_default, ts[,-17], type="class")
+r1 <- table(default_pred, ts$class_type,dnn=c("Prediction","Actual"))
+r1
+
+# overall accuracy 
+r2 <- unclass(r1)
+class(r2)
+
+over <- sum(diag(r2))/nrow(ts)
+
+# accurancy
+cat("the accurancy of 1 is", r1[1,"1"]/sum(r1[1,]), '\n')
+cat("the accurancy of 2 is", r1[2,"2"]/sum(r1[2,]), '\n')
+cat("the accurancy of 3 is", r1[3,"3"]/sum(r1[3,]), '\n')
+cat("the accurancy of 4 is", r1[4,"4"]/sum(r1[4,]), '\n')
+cat("the accurancy of 5 is", r1[5,"5"]/sum(r1[5,]), '\n')
+cat("the accurancy of 6 is", r1[6,"6"]/sum(r1[6,]), '\n')
+cat("the accurancy of 7 is", r1[7,"7"]/sum(r1[7,]), '\n')
+cat("the overall accurancy is",over)
+
+```
+
+## Main features of data 
+
+feature1 : the response variable is categorical
+feature2: binomial 
+feature3:  too much variabels, less rows
+
+
+```{r}
+library(MASS)
+type <- table(wine$class_type)
+
+# dim
+dim(zoo)
+
+# draw density plot
+attach(mtcars)
+par(mfrow = c(2,2))
+
+t1 <- table(zoo$hair)
+barplot(t1, main = "hair")
+t2 <- table(zoo$feathers)
+barplot(t1, main = "feathers")
+t3 <- table(zoo$eggs)
+barplot(t1, main = "eggs")
+t4 <- table(zoo$milk)
+barplot(t1, main = "milk")
+
+library(ggplot2)
+# see the relationship between legs and class type
+temp1 <- aggregate(zoo$legs, list(zoo$animal_class), mean)
+ggplot(temp1,aes(x=Group.1,y = x,fill=x))+ geom_bar(stat="identity") 
+
+# see the relationship between eggs and class type
+temp2 <- aggregate(zoo$eggs, list(zoo$animal_class), mean)
+ggplot(temp2,aes(x=Group.1,y = x,fill=x))+ geom_bar(stat="identity") 
+
+# count vs animal type
+ggplot(zoo,aes(x=animal_class,fill=animal_class))+geom_bar(stat="count")
+
+# two much variables, reduce some variables
+(PC1<-0.88*wine$hair-0.44*wine$feathers-0.93*wine$eggs+0.96*wine$milk-0.42*wine$airborne-0.44*wine$aquatic-0.06*wine$predator+0.70*wine$toothed+0.44*wine$backbone+0.45*wine$breathes-0.21*wine$venomous-0.18*wine$fins+0.25*wine$legs+ 0.27*wine$tail+0.21*wine$domestic+0.62*wine$catsize)
+(PC2<--0.21*wine$hair-0.35*wine$feathers-0.01*wine$eggs+0*wine$milk-0.57*wine$airborne+0.68*wine$aquatic+0.46*wine$predator+0.59*wine$toothed+0.37*wine$backbone-0.67*wine$breathes-0*wine$venomous+0.83*wine$fins-0.62*wine$legs+ 0.29*wine$tail-0.21*wine$domestic+0.17*wine$catsize)
+(PC3<--0.15*wine$hair+0.74*wine$feathers+0.06*wine$eggs-0.02*wine$milk+0.43*wine$airborne-0.1*wine$aquatic-0.18*wine$predator-0.04*wine$toothed+0.73*wine$backbone+0.29*wine$breathes-0.35*wine$venomous+0.07*wine$fins-0.48*wine$legs+ 0.74*wine$tail+0.12*wine$domestic+0.11*wine$catsize)
+
+wine <- data.frame(PC1,PC2,PC3,zoo$class_type)
+
+```
+
+
+# split data
+```{r}
+# naive bayes 
+
+# divide the training and testing data, about 60% of data is training set and 40% is testing set
+set.seed(12345)  
+index.train<-sample(1:nrow(wine),nrow(wine)%/%(10/6))
+index.test <-setdiff(1:nrow(wine),index.train) 
+length(index.train)
+length(index.test)
+
+tr<-wine[index.train,]
+ts<-wine[index.test,]
+
+```
+
+# naive bayes algorithms
+```{r}
+# naive bayes algorithm
+class.labels <- as.character(unique(tr[,length(tr)]))
+pixel_mean <- as.data.frame(matrix(0,length(class.labels),ncol(wine)-1))
+pixel_var <- as.data.frame(matrix(0,length(class.labels),ncol(wine)-1))
+row.names(pixel_mean) <- class.labels
+row.names(pixel_var) <- class.labels
+
+for (cl in class.labels) {
+  d1 <- tr[tr[,length(tr)]==as.numeric(cl),]
+  d2 <- d1[,-length(tr)]
+  n <- nrow(d2)
+  for (i in 1:ncol(d2)) {
+    #pixel_mean[cl,i] <- sum(d2[,i])/n
+    #pixel_var[cl,i] <- sum((d2[,i]- pixel_mean[cl,i])^2)/n
+    pixel_mean[cl,i] <- mean(d2[,i])
+    pixel_var[cl,i] <- var(d2[,i])
+  }
+}
+priors <- table(tr[,length(tr)])/nrow(tr)
+
+# Prediction on test data
+
+predict.naive.bayes <- function(sample,means,variances,priors) {
+  probs <- NULL
+    for (cl in class.labels) {
+      pdf <- 1
+      for (i in 1:3) {
+        if(pixel_var[cl,i]==0){
+          if(pixel_mean[cl,i]==sample[,i]){
+            pdf <- pdf*1
+          }else{
+            pdf <- pdf*0
+          }
+        }else{
+          pdf <- pdf *dnorm(sample[,i],pixel_mean[cl,i],sqrt(pixel_var[cl,i]))
+        }
+       
+      }
+      p <- pdf*priors[cl]
+      probs <- c(probs,p)
+    }
+    return (probs)
+}
+
+pre <- as.data.frame(matrix(0,nrow(ts),length(class.labels)))
+for (i in 1:nrow(ts)) {
+  eachLine <- ts[i,1:ncol(wine)-1]
+  pre[i,] <- predict.naive.bayes(eachLine,pixel_mean,pixel_var,priors)
+}
+colnames(pre) <- class.labels
+
+z<-apply(pre,1,which.max) 
+name <- as.numeric(names(pre)[z])
+name_df <- as.data.frame(name)
+label <- cbind(name_df,ts[,4])
+colnames(label) <- c("preLable","actLable")
+count <- 0
+for (i in 1:nrow(label)) {
+  if(label$preLable[i]==label$actLable[i]){
+    count <- count +1
+  }
+}
+pro_acc <- count/nrow(label)
+pro_acc
+
+result <- table(label$preLable,label$actLable)
+result
+
+
+```
+
+```{r}
+# calculate purity 
+result# the preLabel is the left side and act Label is the horizontal side
+# change result to matrix
+
+cat("the accurancy of 1 is", result[1,"1"]/sum(result[1,]), '\n')
+cat("the accurancy of 2 is", result[2,"2"]/sum(result[2,]), '\n')
+cat("the accurancy of 3 is", result[3,"3"]/sum(result[3,]), '\n')
+cat("the accurancy of 4 is", result[4,"4"]/sum(result[4,]), '\n')
+cat("the accurancy of 6 is", result[5,"6"]/sum(result[5,]), '\n')
+cat("the accurancy of 7 is", result[6,"7"]/sum(result[6,]), '\n')
+
+cat("the overall accurancy is",pro_acc)
+
+# check
+
+```
